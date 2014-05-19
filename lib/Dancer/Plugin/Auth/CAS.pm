@@ -1,5 +1,5 @@
 package Dancer::Plugin::Auth::CAS;
-$Dancer::Plugin::Auth::CAS::VERSION = '0.001'; # TRIAL
+$Dancer::Plugin::Auth::CAS::VERSION = '1.001'; # TRIAL
 
 =head1 NAME
 
@@ -131,6 +131,7 @@ Configure the plugin in your config:
   plugins:
     "Auth::CAS":
         cas_url: "https://your.org/sso"
+        cas_logout_path: "/logout"
         cas_version: "2.0"
         cas_user_map: "user"
         cas_attr_map:
@@ -169,6 +170,10 @@ The available configuration options are listed below.
 =head2 cas_url
 
 The URL of your CAS server
+
+=head2 cas_logout_path
+
+Redirect towards this path or URL when logging out OR if the service is unable to authenticate users.
 
 =head2 cas_version
 
