@@ -1,0 +1,20 @@
+
+
+1.123       Thu Jun 26 19:02:54 2014 +0200
+
+    [ Major ]
+    * On failure to authenticate, redirect to 'cas_denied_url' instead of the 'cas_logout_url'
+    * Raise hard error when the backend is unable to auth instead of redirecting.
+
+    [ Minor ]
+    * Calling auth_cas() with 'cas_user_map', 'cas_logout_path' and 'cas_denied_path' overrides their global value
+
+    [ Patch ]
+    * Sensitive content after calling auth_cas() was reachable on error/auth_failure - fixed with harsh halt()
+      All users SHOULD upgrade to this version.
+
+
+1.002       Mon May 19 14:18:10 2014 +0200
+
+    * Released as stable
+

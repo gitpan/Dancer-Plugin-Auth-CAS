@@ -1,4 +1,5 @@
 package Dancer::Plugin::Auth::CAS;
+$Dancer::Plugin::Auth::CAS::VERSION = '1.123'; # TRIAL
 $Dancer::Plugin::Auth::CAS::VERSION = '1.002';
 
 =head1 NAME
@@ -21,6 +22,7 @@ use Scalar::Util 'blessed';
 our $VERSION;
 
 register_exception('InvalidConfig', message_pattern => "Invalid or missing configuration: %s");
+register_exception('CasError', message_pattern => "Unable to auth with CAS backend: %s");
 
 my $settings = plugin_setting;
 
@@ -29,8 +31,9 @@ sub _auth_cas {
 
     my $base_url = $settings->{cas_url} // raise( InvalidConfig => "cas_url is unset" );
     my $cas_version = $settings->{cas_version} ||  raise( InvalidConfig => "cas_version is unset");
-    my $cas_user_map = $settings->{cas_user_map} || 'cas_user';
-    my $cas_logout_url = $settings->{cas_logout_path} || '/logout';
+    my $cas_user_map = $options{cas_user_map} || $settings->{cas_user_map} || 'cas_user';
+    my $cas_logout_url = $options{cas_logout_path} || $settings->{cas_logout_path} || '/logout';
+    my $cas_denied_url = $options{cas_denied_path} || $settings->{cas_denied_path} || '/denied';
 
     # check supported versions
     unless( grep(/$cas_version/, qw( 2.0 1.0 )) ) {
@@ -43,40 +46,57 @@ sub _auth_cas {
     my $ticket = $options{ticket} // params->{ticket};
 
     my $cas = Authen::CAS::Client->new( $base_url );
-    
+
     my $user = session($cas_user_map);
 
     unless( $user ) {
+
+        my $response = Dancer::Response->new( status => 302 );
+        my $redirect_url;
+
         if( $ticket) {
             debug "Trying to validate via CAS '$cas_version' with ticket=$ticket";
             
             my $r;
             if( $cas_version eq "1.0" ) {
                 $r = $cas->validate( $service, $ticket );
-            } 
+            }
             elsif( $cas_version eq "2.0" ) {
                 $r = $cas->service_validate( $service, $ticket );
-            } 
+            }
             else {
                 raise( InvalidConfig => "cas_version '$cas_version' not supported");
             }
-            
+
             if( $r->is_success ) {
+
+                # Redirect to given path
                 info "Authenticated as: ".$r->user;
-
                 session $cas_user_map => _map_attributes( $r->doc, $mapping );
+                $redirect_url = uri_for( request->path );
 
-                redirect uri_for( request->path );
+            } elsif( $r->is_failure ) {
+
+                # Redirect to denied
+                debug "Failed to authenticate: ".$r->code." / ".$r->message;
+                $redirect_url = uri_for( $cas_denied_url );
+
             } else {
-                warning "Unable to authenticate: ".blessed($r);
-                redirect uri_for( $cas_logout_url );
+
+                # Raise hard error, backend has errors
+                error "Unable to authenticate: ".$r->error;
+                raise( CasError => $r->error );
             }
-            
+
         } else {
+            # Has no ticket, needs one
             debug "Redirecting to CAS: ".$cas->login_url( $service );
-            status 302;
-            header 'Location' => $cas->login_url( $service );
+            $redirect_url = $cas->login_url( $service );
         }
+
+        # General redir response
+        $response->header( Location => $redirect_url );
+        halt( $response );
     }
     
 }
