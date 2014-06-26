@@ -1,7 +1,5 @@
 package Dancer::Plugin::Auth::CAS;
-$Dancer::Plugin::Auth::CAS::VERSION = '1.123'; # TRIAL
-$Dancer::Plugin::Auth::CAS::VERSION = '1.002';
-
+$Dancer::Plugin::Auth::CAS::VERSION = '1.124';
 =head1 NAME
 
 Dancer::Plugin::Auth::CAS - CAS sso authentication for Dancer
@@ -32,7 +30,6 @@ sub _auth_cas {
     my $base_url = $settings->{cas_url} // raise( InvalidConfig => "cas_url is unset" );
     my $cas_version = $settings->{cas_version} ||  raise( InvalidConfig => "cas_version is unset");
     my $cas_user_map = $options{cas_user_map} || $settings->{cas_user_map} || 'cas_user';
-    my $cas_logout_url = $options{cas_logout_path} || $settings->{cas_logout_path} || '/logout';
     my $cas_denied_url = $options{cas_denied_path} || $settings->{cas_denied_path} || '/denied';
 
     # check supported versions
@@ -151,7 +148,7 @@ Configure the plugin in your config:
   plugins:
     "Auth::CAS":
         cas_url: "https://your.org/sso"
-        cas_logout_path: "/logout"
+        cas_denied_path: "/denied"
         cas_version: "2.0"
         cas_user_map: "user"
         cas_attr_map:
@@ -168,6 +165,12 @@ Call the C<auth_cas> function in a before filter:
 
         # or if you want to fetch the ticket yourself:
         auth_cas( ticket => $cas_ticket_id ); 
+
+        # or if you want to override global options:
+        auth_cas(
+            cas_denied_path => ... ,
+            cas_user_map => ... ,
+        );
     };
 
 or in a route handler:
@@ -191,9 +194,9 @@ The available configuration options are listed below.
 
 The URL of your CAS server
 
-=head2 cas_logout_path
+=head2 cas_denied_path
 
-Redirect towards this path or URL when logging out OR if the service is unable to authenticate users.
+Redirect towards this path or URL when authentication worked but was simply invalid.
 
 =head2 cas_version
 
@@ -224,12 +227,13 @@ This will map the CAS user attribute C<email> to C<user_email> aso..
 =head2 auth_cas ( %args )
 
 This function may be called in a before filter or at the beginning of a route
-handler. It checks if the client is authorized to access the requested path --
-if not, redirects the client towards the CAS-server SSO login URL.
+handler. It checks if the client is authenticated, else it redirects the client 
+towards the CAS-server SSO login URL.
 
 If the login succeeds, the CAS-Server will redirect the client towards the 
 first requested path including a 'ticket' as URL parameter. This triggers the C<auth_cas>
-a second time, where it validates the 'ticket' against the CAS-Server.
+a second time, where it validates the 'ticket' against the CAS-Server. If the service ticket
+validation fails, it will redirect the client towards the C<cas_denied_path> URL.
 
 Once the ticket validation has been done, the server includes user attributes 
 in its reponse to the Dancer application. These user attributes are stored as a HashRef in
@@ -243,6 +247,14 @@ Parameters:
 =item * C<ticket> (optional)
 
 If you want to extract the CAS ticket yourself, then you can forward it explicitly with this parameter.
+
+=item * C<cas_denied_path> (optional)
+
+See C<cas_denied_path> in the configuration section.
+
+=item * C<cas_user_map> (optional)
+
+See C<cas_user_map> in the configuration section.
 
 =back
 
