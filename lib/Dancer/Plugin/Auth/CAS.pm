@@ -1,5 +1,5 @@
 package Dancer::Plugin::Auth::CAS;
-$Dancer::Plugin::Auth::CAS::VERSION = '1.124';
+$Dancer::Plugin::Auth::CAS::VERSION = '1.125';
 =head1 NAME
 
 Dancer::Plugin::Auth::CAS - CAS sso authentication for Dancer
@@ -39,8 +39,24 @@ sub _auth_cas {
 
     my $mapping = $settings->{cas_attr_map} || {};
 
-    my $service = uri_for( request->path );
-    my $ticket = $options{ticket} // params->{ticket};
+    my $ticket = $options{ticket};
+    my $params = request->params;
+    unless( $ticket ) {
+        my $tickets = $params->{ticket};
+        # For the case when application also uses 'ticket' parameters
+        # we only remove the real cas service ticket
+        if( ref($tickets) eq "ARRAY" ) {
+            while( my ($index, $value) = each @$tickets ) {
+                # The 'ST-' is specified in CAS-protocol
+                if( $value =~ m/^ST\-/ ) {
+                    $ticket = delete $tickets->[$index];
+                }
+            }
+        } else {
+            $ticket = delete $params->{ticket};
+        }
+    }
+    my $service = uri_for( request->path_info, $params );
 
     my $cas = Authen::CAS::Client->new( $base_url );
 
