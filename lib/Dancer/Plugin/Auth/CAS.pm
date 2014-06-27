@@ -1,5 +1,5 @@
 package Dancer::Plugin::Auth::CAS;
-$Dancer::Plugin::Auth::CAS::VERSION = '1.125';
+$Dancer::Plugin::Auth::CAS::VERSION = '1.126';
 =head1 NAME
 
 Dancer::Plugin::Auth::CAS - CAS sso authentication for Dancer
