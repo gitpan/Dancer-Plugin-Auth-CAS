@@ -1,5 +1,5 @@
 package Dancer::Plugin::Auth::CAS;
-$Dancer::Plugin::Auth::CAS::VERSION = '1.126';
+$Dancer::Plugin::Auth::CAS::VERSION = '1.127';
 =head1 NAME
 
 Dancer::Plugin::Auth::CAS - CAS sso authentication for Dancer
@@ -85,8 +85,12 @@ sub _auth_cas {
 
                 # Redirect to given path
                 info "Authenticated as: ".$r->user;
-                session $cas_user_map => _map_attributes( $r->doc, $mapping );
-                $redirect_url = uri_for( request->path );
+                if( $cas_version eq "1.0" ) {
+                    session $cas_user_map => $r->user;
+                } else {
+                    session $cas_user_map => _map_attributes( $r->doc, $mapping );
+                }
+                $redirect_url = $service;
 
             } elsif( $r->is_failure ) {
 

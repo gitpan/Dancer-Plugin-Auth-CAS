@@ -1,3 +1,8 @@
+1.127       Wed Jul 02 18:14:22 2014 +0200
+
+    [ Patch ]
+    * Made the /validate fully CAS 1.0 aware and fixed the redirect with url parameters on validation sucess
+
 1.126       Thu Jun 26 22:12:32 2014 +0200
 
     [ Patch ]
